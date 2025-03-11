@@ -128,7 +128,7 @@ const DynamicForm: React.FC = () => {
   console.log(formStructure)
   return (
     <form onSubmit={handleSubmit}>
-      <h2>{formStructure.title}</h2>
+      <h2 className='text-red-700'>{formStructure.title}</h2>
       {formStructure.map((field) => renderField(field))}
       <button type='submit'>Submit Application</button>
     </form>
