@@ -2,6 +2,7 @@ import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react'
 import axiosInstance from '../util/axiosInstance'
 import SelectInput from '../components/SelectInput'
 import TextInput from '../components/TextInput'
+import { evaluateCondition, generateIfCondition } from './utils'
 
 interface FormData {
   [key: string]: string
@@ -132,8 +133,8 @@ const DynamicForm: React.FC = () => {
     // Check conditional logic.
 
     if (isField(field) && field.visibility?.condition) {
-      const conditionValue = formData[field.visibility.condition]
-      if (conditionValue !== field.visibility.condition) {
+      const ifCondition: string = generateIfCondition(field.visibility, formData)
+      if (!evaluateCondition(ifCondition, formData)) {
         return null
       }
     }
@@ -149,22 +150,26 @@ const DynamicForm: React.FC = () => {
     }
 
     // Render nested fields if present.
-    if (!isField(field) && field.fields && Array.isArray(field.fields)) {
+    if (
+      'fields' in field &&
+      'label' in field &&
+      field.fields &&
+      Array.isArray(field.fields)
+    ) {
       return (
         <div
-          key={field.formId}
           className={`p-4 ${
             field.fields.length !== index && 'border-b'
           } border-gray-300 `}
         >
-          <h3 className='font-semibold text-lg mb-2'>{field.title}</h3>
+          <h3 className='font-semibold text-lg mb-2'>{field.label}</h3>
           {field.fields.map((subField) => renderForm(subField, index))}
         </div>
       )
     }
 
     // Render fields based on their type.
-    if (isField(field))
+    if (isField(field)) {
       switch (field.type) {
         case 'text':
           return (
@@ -198,9 +203,11 @@ const DynamicForm: React.FC = () => {
         default:
           return null
       }
+    }
   }
 
   if (!formStructure) return <div>Loading form...</div>
+  console.log('serverrrrrr', formStructure)
   return (
     <form
       onSubmit={handleSubmit}
