@@ -118,20 +118,47 @@ const DynamicForm: React.FC = () => {
       .catch((err) => console.error('Error submitting form', err))
   }
 
-  const generateOptions = (options: string[]) => {
-    const newOptions = options.map((option) => {
-      return {
+  const generateOptions = (
+    field: SelectField | RadioField
+  ): { value: string; label: string }[] => {
+    let options: { value: string; label: string }[] = [
+      { value: '', label: 'Select an option' }
+    ]
+
+    if ('dynamicOptions' in field && field.dynamicOptions) {
+      // Make request synchronously (not recommended in practice)
+      try {
+        const xhr = new XMLHttpRequest()
+        const endpoint =
+          'https://assignment.devotel.io' +
+          field.dynamicOptions.endpoint +
+          '?country=' +
+          formData[field.dynamicOptions.dependsOn]
+        xhr.open(field.dynamicOptions.method, endpoint, false)
+        xhr.send()
+
+        if (xhr.status === 200) {
+          const responseData = JSON.parse(xhr.responseText)
+          const dynamicOptions = responseData.states.map((item: string) => ({
+            value: item,
+            label: item
+          }))
+          options = [{ value: '', label: 'Select an option' }, ...dynamicOptions]
+        }
+      } catch (error) {
+        console.error('Error fetching dynamic options:', error)
+      }
+    } else if (field?.options?.length) {
+      const newOptions = field.options.map((option) => ({
         value: option,
         label: option
-      }
-    })
-    return [
-      {
-        value: '',
-        label: 'Select an option'
-      },
-      ...newOptions
-    ]
+      }))
+
+      console.log('options===========', newOptions)
+      options = [{ value: '', label: 'Select an option' }, ...newOptions]
+    }
+
+    return options
   }
 
   // Recursive function to render fields (supports nested fields and conditional logic).
@@ -197,7 +224,7 @@ const DynamicForm: React.FC = () => {
                 onChange={(e: ChangeEvent<HTMLSelectElement>) =>
                   handleChange(field.id, e.target.value)
                 }
-                options={generateOptions(field.options || [])}
+                options={generateOptions(field)}
               />
             </div>
           )
@@ -225,7 +252,7 @@ const DynamicForm: React.FC = () => {
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   handleChange(field.id, e.target.value)
                 }
-                options={generateOptions(field.options || [])}
+                options={generateOptions(field)}
               />
             </div>
           )
