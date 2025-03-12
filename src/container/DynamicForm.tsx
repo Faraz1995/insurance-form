@@ -1,136 +1,222 @@
-// src/components/DynamicForm.tsx
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react'
 import axiosInstance from '../util/axiosInstance'
-
-interface FieldCondition {
-  field: string
-  value: any
-}
-
-interface FieldOption {
-  value: string
-  label: string
-}
-
-export interface FormField {
-  name: string
-  type: string
-  label: string
-  condition?: FieldCondition
-  fields?: FormField[]
-  options?: FieldOption[]
-}
-
-export interface FormStructure {
-  title: string
-  fields: FormField[]
-}
+import SelectInput from '../components/SelectInput'
+import TextInput from '../components/TextInput'
 
 interface FormData {
-  [key: string]: any
+  [key: string]: string
+}
+
+// Represents a visibility condition for a field.
+interface VisibilityCondition {
+  dependsOn: string
+  condition: string
+  value: string
+}
+
+// Represents dynamic options configuration for a select field.
+interface DynamicOptions {
+  dependsOn: string
+  endpoint: string
+  method: string
+}
+
+// Base type for all form fields.
+interface BaseField {
+  id: string
+  label: string
+  required?: boolean
+  // Optional property to control field visibility based on another field.
+  visibility?: VisibilityCondition
+}
+
+// Field type for groups which can contain nested fields.
+interface GroupField extends BaseField {
+  type: 'group'
+  fields: Field[]
+}
+
+// Field type for a simple text input.
+interface TextField extends BaseField {
+  type: 'text'
+}
+
+// Field type for date input.
+interface DateField extends BaseField {
+  type: 'date'
+}
+
+// Field type for select inputs.
+// It can have either a fixed list of options or a dynamic options configuration.
+interface SelectField extends BaseField {
+  type: 'select'
+  options?: string[]
+  dynamicOptions?: DynamicOptions
+}
+
+// Field type for radio inputs.
+interface RadioField extends BaseField {
+  type: 'radio'
+  options: string[]
+}
+
+// Union type of all possible field types.
+type Field = GroupField | TextField | DateField | SelectField | RadioField
+
+// The main form interface.
+type Form = {
+  formId: string
+  title: string
+  fields: Field[]
+}
+
+type RenderType = Form | Field
+
+function isField(item: RenderType): item is Field {
+  return !('formId' in item)
 }
 
 const DynamicForm: React.FC = () => {
-  const [formStructure, setFormStructure] = useState<FormField[]>([])
+  const [formStructure, setFormStructure] = useState<Form[]>([])
   const [formData, setFormData] = useState<FormData>({})
 
   // Fetch form structure from API when component mounts.
   useEffect(() => {
-    axiosInstance
-      .get<FormStructure>('/api/insurance/forms')
-      .then((response) => setFormStructure(response.data))
+    axiosInstance({
+      method: 'get',
+      url: '/api/insurance/forms'
+    })
+      .then((res) => {
+        const arr = [res.data[0]]
+        setFormStructure(arr)
+      })
       .catch((err) => console.error('Error fetching form structure', err))
   }, [])
 
-  const handleChange = (fieldName: string, value: any) => {
+  const handleChange = (fieldName: string, value: string) => {
     setFormData((prev) => ({ ...prev, [fieldName]: value }))
   }
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     // You can add validation logic here before submission.
-    axiosInstance
-      .post('/api/insurance/forms/submit', formData)
+    axiosInstance({
+      method: 'post',
+      url: '/api/insurance/forms/submit',
+      data: formData
+    })
       .then((response) => {
         console.log('Form submitted successfully', response.data)
-        // Optionally clear the form or show a success message.
       })
       .catch((err) => console.error('Error submitting form', err))
   }
 
+  const generateOptions = (options: string[]) => {
+    const newOptions = options.map((option) => {
+      return {
+        value: option,
+        label: option
+      }
+    })
+    return [
+      {
+        value: '',
+        label: 'Select an option'
+      },
+      ...newOptions
+    ]
+  }
+
   // Recursive function to render fields (supports nested fields and conditional logic).
-  const renderField = (field: FormField) => {
+  const renderForm = (field: RenderType, index: number) => {
     // Check conditional logic.
-    if (field.condition) {
-      const conditionValue = formData[field.condition.field]
-      if (conditionValue !== field.condition.value) {
+
+    if (isField(field) && field.visibility?.condition) {
+      const conditionValue = formData[field.visibility.condition]
+      if (conditionValue !== field.visibility.condition) {
         return null
       }
     }
 
-    // Render nested fields if present.
-    if (field.fields && Array.isArray(field.fields)) {
+    if (!isField(field) && field.title) {
       return (
-        <fieldset key={field.name} style={{ marginBottom: '1rem' }}>
-          <legend>{field.label}</legend>
-          {field.fields.map((subField) => renderField(subField))}
-        </fieldset>
+        <div key={field.formId} className='mb-4 p-4 border border-gray-300 rounded-md'>
+          <h3 className='font-semibold text-lg mb-2'>{field.title}</h3>
+          {field.fields &&
+            field.fields.map((subField: Field) => renderForm(subField, index))}
+        </div>
+      )
+    }
+
+    // Render nested fields if present.
+    if (!isField(field) && field.fields && Array.isArray(field.fields)) {
+      return (
+        <div
+          key={field.formId}
+          className={`p-4 ${
+            field.fields.length !== index && 'border-b'
+          } border-gray-300 `}
+        >
+          <h3 className='font-semibold text-lg mb-2'>{field.title}</h3>
+          {field.fields.map((subField) => renderForm(subField, index))}
+        </div>
       )
     }
 
     // Render fields based on their type.
-    switch (field.type) {
-      case 'text':
-      case 'number':
-        return (
-          <div key={field.name} style={{ marginBottom: '1rem' }}>
-            <label htmlFor={field.name}>{field.label}</label>
-            <input
-              id={field.name}
-              type={field.type}
-              name={field.name}
-              value={formData[field.name] || ''}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                handleChange(field.name, e.target.value)
-              }
-            />
-          </div>
-        )
-      case 'select':
-        return (
-          <div key={field.name} style={{ marginBottom: '1rem' }}>
-            <label htmlFor={field.name}>{field.label}</label>
-            <select
-              id={field.name}
-              name={field.name}
-              value={formData[field.name] || ''}
-              onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                handleChange(field.name, e.target.value)
-              }
-            >
-              <option value=''>Select</option>
-              {field.options &&
-                field.options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-            </select>
-          </div>
-        )
-      // Additional field types (e.g., checkbox, radio) can be added here.
-      default:
-        return null
-    }
+    if (isField(field))
+      switch (field.type) {
+        case 'text':
+          return (
+            <div key={field.id} className='mb-4'>
+              <TextInput
+                id={field.id}
+                label={field.label}
+                value={formData[field.id || '']}
+                placeholder={field.label}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  handleChange(field.id, e.target.value)
+                }
+              />
+            </div>
+          )
+        case 'select':
+          return (
+            <div key={field.id} className='mb-4'>
+              <SelectInput
+                id={field.id}
+                label={field.label}
+                value={formData[field.id]}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                  handleChange(field.id, e.target.value)
+                }
+                options={generateOptions(field.options || [])}
+              />
+            </div>
+          )
+        // Additional field types (e.g., checkbox, radio) can be added here.
+        default:
+          return null
+      }
   }
 
   if (!formStructure) return <div>Loading form...</div>
-  console.log(formStructure)
   return (
-    <form onSubmit={handleSubmit}>
-      <h2 className='text-red-700'>{formStructure.title}</h2>
-      {formStructure.map((field) => renderField(field))}
-      <button type='submit'>Submit Application</button>
+    <form
+      onSubmit={handleSubmit}
+      className='max-w-2xl mx-auto p-6 bg-white rounded-md shadow-md'
+    >
+      {formStructure.map((field, index) => (
+        <div key={field.formId}>{renderForm(field, index)}</div>
+      ))}
+      <div className='flex justify-center'>
+        <button
+          type='submit'
+          className='px-6 py-2 bg-blue-500 text-white font-semibold rounded-md hover:bg-blue-600'
+        >
+          Submit Application
+        </button>
+      </div>
     </form>
   )
 }
