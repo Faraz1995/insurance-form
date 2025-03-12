@@ -1,30 +1,39 @@
-// src/components/ApplicationList.tsx
 import React, { useState, useEffect, ChangeEvent } from 'react'
 import axiosInstance from '../util/axiosInstance'
+import TextInput from '../components/TextInput'
+import SelectInput from '../components/SelectInput'
 
-interface Application {
-  [key: string]: any
+type Application = {
+  id: string
+  'Full Name': string
+  Age: number
+  Gender: string
+  'Insurance Type': string
+  City: string
 }
+const pageSize = 10
+
+const sortOptions = [
+  { value: 'Full Name', label: 'Full Name' },
+  { value: 'Insurance Type', label: 'Insurance Type' }
+]
 
 const ApplicationList: React.FC = () => {
-  const [applications, setApplications] = useState<any[]>([])
-  const [columns, setColumns] = useState<string[]>([
-    'name',
-    'age',
-    'insuranceType',
-    'city',
-    'status'
-  ])
-  const [sortField, setSortField] = useState<string>('name')
+  const [applications, setApplications] = useState<Application[]>([])
+  const [columns, setColumns] = useState<string[]>([])
+  const [sortField, setSortField] = useState<keyof Application>('Full Name')
   const [search, setSearch] = useState<string>('')
   const [page, setPage] = useState<number>(1)
-  const pageSize = 10 // Fixed page size for simplicity.
 
-  // Fetch submitted applications from API.
   useEffect(() => {
-    axiosInstance
-      .get('/api/insurance/forms/submissions')
-      .then((response) => setApplications(response.data))
+    axiosInstance({
+      method: 'get',
+      url: '/api/insurance/forms/submissions'
+    })
+      .then((res) => {
+        setColumns(res.data.columns)
+        setApplications(res.data.data)
+      })
       .catch((err) => console.error('Error fetching applications', err))
   }, [])
 
@@ -32,71 +41,82 @@ const ApplicationList: React.FC = () => {
     setSearch(e.target.value)
   }
 
+  const handleSortChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setSortField(e.target.value as keyof Application)
+  }
+
+  if (columns.length === 0) {
+    return <div>Loading...</div>
+  }
+
   // Filter applications based on search input.
-  console.log('applications====', applications)
-  const filteredApps = applications?.data
-    ? applications.data.filter((app) =>
-        Object.values(app).join(' ').toLowerCase().includes(search.toLowerCase())
-      )
-    : []
+  const filteredApps =
+    applications.length > 0
+      ? applications.filter((app) => {
+          return app['Full Name'].toLowerCase().includes(search.toLowerCase())
+        })
+      : []
 
-  console.log({ filteredApps })
-
-  // Sort applications by the selected field.
   const sortedApps = [...filteredApps].sort((a, b) => {
     if (a[sortField] < b[sortField]) return -1
     if (a[sortField] > b[sortField]) return 1
     return 0
   })
 
-  // Simple pagination logic.
   const paginatedApps = sortedApps.slice((page - 1) * pageSize, page * pageSize)
-
   return (
-    <div>
-      <h2>Submitted Applications</h2>
-      <div style={{ marginBottom: '1rem' }}>
-        <label htmlFor='search'>Search: </label>
-        <input
-          id='search'
-          type='text'
-          value={search}
-          onChange={handleSearchChange}
-          placeholder='Search applications...'
-        />
+    <div className='p-6'>
+      <h2 className='text-2xl font-semibold mb-4'>Submitted Applications</h2>
+      <div className='mb-6 bg-white p-6 rounded-lg shadow-md'>
+        <div className='flex gap-4'>
+          <div className='flex-1'>
+            <TextInput
+              id='search'
+              label='search'
+              value={search}
+              onChange={handleSearchChange}
+              placeholder='Search applications...'
+            />
+          </div>
+
+          <div className='flex-1'>
+            <SelectInput
+              id='sort'
+              label='Sort By'
+              value={sortField}
+              onChange={handleSortChange}
+              options={sortOptions}
+            />
+          </div>
+        </div>
       </div>
-      <table border={1} cellPadding={8}>
-        <thead>
-          <tr>
+
+      <div className='grid grid-cols-1 gap-4'>
+        {paginatedApps.map((app, index) => (
+          <div key={index} className='p-4 bg-white rounded-lg shadow-md'>
             {columns.map((col) => (
-              <th
-                key={col}
-                onClick={() => setSortField(col)}
-                style={{ cursor: 'pointer' }}
-              >
-                {col.charAt(0).toUpperCase() + col.slice(1)}
-              </th>
+              <div key={col} className='flex justify-between py-1'>
+                <span className='font-semibold'>{col}</span>
+                <span>{app[col as keyof Application]}</span>
+              </div>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedApps.map((app, index) => (
-            <tr key={index}>
-              {columns.map((col) => (
-                <td key={col}>{app[col]}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div style={{ marginTop: '1rem' }}>
-        <button disabled={page === 1} onClick={() => setPage(page - 1)}>
+          </div>
+        ))}
+      </div>
+
+      <div className='flex justify-between items-center mt-4'>
+        <button
+          disabled={page === 1}
+          onClick={() => setPage(page - 1)}
+          className='px-4 py-2 bg-blue-500 text-white rounded-md disabled:opacity-50'
+        >
           Prev
         </button>
-        <span style={{ margin: '0 1rem' }}>Page {page}</span>
+        <span className='text-lg font-medium'>Page {page}</span>
         <button
           disabled={page * pageSize >= sortedApps.length}
           onClick={() => setPage(page + 1)}
+          className='px-4 py-2 bg-blue-500 text-white rounded-md disabled:opacity-50'
         >
           Next
         </button>
