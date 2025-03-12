@@ -73,10 +73,14 @@ type Form = {
   fields: Field[]
 }
 
-type RenderType = Form | Field
+type RenderType = Form | Field | GroupField
 
 function isField(item: RenderType): item is Field {
   return !('formId' in item)
+}
+
+function isGroup(item: RenderType): item is GroupField {
+  return 'type' in item && item.type === 'group'
 }
 
 const DynamicForm: React.FC = () => {
@@ -141,6 +145,7 @@ const DynamicForm: React.FC = () => {
       }
     }
 
+    //render title
     if (!isField(field) && field.title) {
       return (
         <div key={field.formId} className='mb-4 p-4 border border-gray-300 rounded-md'>
@@ -152,12 +157,7 @@ const DynamicForm: React.FC = () => {
     }
 
     // Render nested fields if present.
-    if (
-      'fields' in field &&
-      'label' in field &&
-      field.fields &&
-      Array.isArray(field.fields)
-    ) {
+    if (isGroup(field) && field.fields && Array.isArray(field.fields)) {
       return (
         <div
           className={`p-4 ${
