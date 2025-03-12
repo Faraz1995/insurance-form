@@ -6,9 +6,19 @@ interface RadioInputProps {
   onChange: (e: ChangeEvent<HTMLInputElement>) => void
   label: string
   options: { value: string; label: string }[]
+  required?: boolean
+  name: string
 }
 
-const RadioInput = ({ id, value, onChange, label, options }: RadioInputProps) => {
+const RadioInput = ({
+  id,
+  value,
+  onChange,
+  label,
+  options,
+  required,
+  name
+}: RadioInputProps) => {
   return (
     <div>
       <label className='block text-sm font-medium text-gray-700 mb-1'>{label}</label>
@@ -18,8 +28,10 @@ const RadioInput = ({ id, value, onChange, label, options }: RadioInputProps) =>
             <input
               id={`${id}-${option.value}`}
               type='radio'
+              name={name}
               value={option.value}
               checked={value === option.value}
+              required={required}
               onChange={onChange}
               className='w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500'
             />

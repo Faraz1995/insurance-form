@@ -106,18 +106,19 @@ const DynamicForm: React.FC = () => {
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // You can add validation logic here before submission.
+
     axiosInstance({
       method: 'post',
       url: '/api/insurance/forms/submit',
       data: formData
     })
       .then((response) => {
+        setFormData({})
         console.log('Form submitted successfully', response.data)
       })
       .catch((err) => console.error('Error submitting form', err))
   }
-
+  console.log(formData)
   const generateOptions = (
     field: SelectField | RadioField
   ): { value: string; label: string }[] => {
@@ -126,27 +127,29 @@ const DynamicForm: React.FC = () => {
     ]
 
     if ('dynamicOptions' in field && field.dynamicOptions) {
-      // Make request synchronously (not recommended in practice)
-      try {
-        const xhr = new XMLHttpRequest()
-        const endpoint =
-          'https://assignment.devotel.io' +
-          field.dynamicOptions.endpoint +
-          '?country=' +
-          formData[field.dynamicOptions.dependsOn]
-        xhr.open(field.dynamicOptions.method, endpoint, false)
-        xhr.send()
+      if (formData[field.dynamicOptions.dependsOn]) {
+        // Make request synchronously (not recommended in practice)
+        try {
+          const xhr = new XMLHttpRequest()
+          const endpoint =
+            'https://assignment.devotel.io' +
+            field.dynamicOptions.endpoint +
+            '?country=' +
+            formData[field.dynamicOptions.dependsOn]
+          xhr.open(field.dynamicOptions.method, endpoint, false)
+          xhr.send()
 
-        if (xhr.status === 200) {
-          const responseData = JSON.parse(xhr.responseText)
-          const dynamicOptions = responseData.states.map((item: string) => ({
-            value: item,
-            label: item
-          }))
-          options = [{ value: '', label: 'Select an option' }, ...dynamicOptions]
+          if (xhr.status === 200) {
+            const responseData = JSON.parse(xhr.responseText)
+            const dynamicOptions = responseData.states.map((item: string) => ({
+              value: item,
+              label: item
+            }))
+            options = [{ value: '', label: 'Select an option' }, ...dynamicOptions]
+          }
+        } catch (error) {
+          console.error('Error fetching dynamic options:', error)
         }
-      } catch (error) {
-        console.error('Error fetching dynamic options:', error)
       }
     } else if (field?.options?.length) {
       const newOptions = field.options.map((option) => ({
@@ -154,7 +157,6 @@ const DynamicForm: React.FC = () => {
         label: option
       }))
 
-      console.log('options===========', newOptions)
       options = [{ value: '', label: 'Select an option' }, ...newOptions]
     }
 
@@ -206,8 +208,10 @@ const DynamicForm: React.FC = () => {
               <TextInput
                 id={field.id}
                 label={field.label}
-                value={formData[field.id || '']}
+                name={field.id}
+                value={formData[field.id] || ''}
                 placeholder={field.label}
+                required={field.required}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   handleChange(field.id, e.target.value)
                 }
@@ -219,8 +223,10 @@ const DynamicForm: React.FC = () => {
             <div key={field.id} className='mb-4'>
               <SelectInput
                 id={field.id}
+                name={field.id}
                 label={field.label}
-                value={formData[field.id]}
+                value={formData[field.id] || ''}
+                required={field.required}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) =>
                   handleChange(field.id, e.target.value)
                 }
@@ -233,9 +239,11 @@ const DynamicForm: React.FC = () => {
             <div key={field.id} className='mb-4'>
               <DateInput
                 id={field.id}
+                name={field.id}
                 label={field.label}
-                value={formData[field.id]}
+                value={formData[field.id] || ''}
                 placeholder={field.label}
+                required={field.required}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   handleChange(field.id, e.target.value)
                 }
@@ -247,8 +255,10 @@ const DynamicForm: React.FC = () => {
             <div key={field.id} className='mb-4'>
               <RadioInput
                 id={field.id}
+                name={field.id}
                 label={field.label}
-                value={formData[field.id]}
+                value={formData[field.id] || ''}
+                required={field.required}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   handleChange(field.id, e.target.value)
                 }
@@ -264,7 +274,6 @@ const DynamicForm: React.FC = () => {
   }
 
   if (!formStructure) return <div>Loading form...</div>
-  console.log('serverrrrrr', formStructure)
   return (
     <form
       onSubmit={handleSubmit}
@@ -273,6 +282,16 @@ const DynamicForm: React.FC = () => {
       {formStructure.map((field, index) => (
         <div key={field.formId}>{renderForm(field, index)}</div>
       ))}
+      {/* <TextInput
+        name='name'
+        label='Name'
+        placeholder='Enter your name'
+        id='name'
+        value={formData.name || ''}
+        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+          handleChange('name', e.target.value)
+        }
+      /> */}
       <div className='flex justify-center'>
         <button
           type='submit'
