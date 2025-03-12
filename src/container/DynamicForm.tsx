@@ -3,6 +3,8 @@ import axiosInstance from '../util/axiosInstance'
 import SelectInput from '../components/SelectInput'
 import TextInput from '../components/TextInput'
 import { evaluateCondition, generateIfCondition } from './utils'
+import DateInput from '../components/DateInput'
+import RadioInput from '../components/RadioInput'
 
 interface FormData {
   [key: string]: string
@@ -193,6 +195,34 @@ const DynamicForm: React.FC = () => {
                 label={field.label}
                 value={formData[field.id]}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                  handleChange(field.id, e.target.value)
+                }
+                options={generateOptions(field.options || [])}
+              />
+            </div>
+          )
+        case 'date':
+          return (
+            <div key={field.id} className='mb-4'>
+              <DateInput
+                id={field.id}
+                label={field.label}
+                value={formData[field.id]}
+                placeholder={field.label}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  handleChange(field.id, e.target.value)
+                }
+              />
+            </div>
+          )
+        case 'radio':
+          return (
+            <div key={field.id} className='mb-4'>
+              <RadioInput
+                id={field.id}
+                label={field.label}
+                value={formData[field.id]}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   handleChange(field.id, e.target.value)
                 }
                 options={generateOptions(field.options || [])}
