@@ -46,7 +46,11 @@ const ApplicationList: React.FC = () => {
   }
 
   if (columns.length === 0) {
-    return <div>Loading...</div>
+    return (
+      <div className='flex justify-center items-center h-64'>
+        <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500'></div>
+      </div>
+    )
   }
 
   // Filter applications based on search input.
@@ -64,15 +68,19 @@ const ApplicationList: React.FC = () => {
   })
 
   const paginatedApps = sortedApps.slice((page - 1) * pageSize, page * pageSize)
+  const totalPages = Math.ceil(sortedApps.length / pageSize)
+
   return (
     <div className='p-6'>
       <h2 className='text-2xl font-semibold mb-4'>Submitted Applications</h2>
+
       <div className='mb-6 bg-white p-6 rounded-lg shadow-md'>
-        <div className='flex gap-4'>
+        <div className='flex gap-4 flex-col sm:flex-row'>
           <div className='flex-1'>
             <TextInput
               id='search'
-              label='search'
+              name='search'
+              label='Search'
               value={search}
               onChange={handleSearchChange}
               placeholder='Search applications...'
@@ -82,6 +90,7 @@ const ApplicationList: React.FC = () => {
           <div className='flex-1'>
             <SelectInput
               id='sort'
+              name='sort'
               label='Sort By'
               value={sortField}
               onChange={handleSortChange}
@@ -91,32 +100,66 @@ const ApplicationList: React.FC = () => {
         </div>
       </div>
 
-      <div className='grid grid-cols-1 gap-4'>
-        {paginatedApps.map((app, index) => (
-          <div key={index} className='p-4 bg-white rounded-lg shadow-md'>
-            {columns.map((col) => (
-              <div key={col} className='flex justify-between py-1'>
-                <span className='font-semibold'>{col}</span>
-                <span>{app[col as keyof Application]}</span>
+      <div className='overflow-x-auto bg-white rounded-lg shadow-md'>
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 border-b border-gray-200 bg-gray-50'>
+          {columns.map((column) => (
+            <div
+              key={column}
+              className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'
+            >
+              {column}
+            </div>
+          ))}
+        </div>
+
+        <div className='divide-y divide-gray-200'>
+          {paginatedApps.length > 0 ? (
+            paginatedApps.map((app, index) => (
+              <div
+                key={app.id || index}
+                className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 ${
+                  index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                }`}
+              >
+                {columns.map((column) => (
+                  <div
+                    key={`${app.id}-${column}`}
+                    className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'
+                  >
+                    {app[column as keyof Application]}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ))}
+            ))
+          ) : (
+            <div className='px-6 py-4 text-center text-sm text-gray-500'>
+              No applications found
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className='flex justify-between items-center mt-4'>
+      {/* Pagination */}
+      <div className='flex justify-between items-center mt-4 bg-white p-4 rounded-lg shadow-md'>
         <button
           disabled={page === 1}
           onClick={() => setPage(page - 1)}
-          className='px-4 py-2 bg-blue-500 text-white rounded-md disabled:opacity-50'
+          className='px-4 py-2 bg-blue-500 text-white rounded-md disabled:opacity-50 transition-colors hover:bg-blue-600'
         >
-          Prev
+          Previous
         </button>
-        <span className='text-lg font-medium'>Page {page}</span>
+
+        <div className='flex items-center'>
+          <span className='text-sm text-gray-700'>
+            Page <span className='font-medium'>{page}</span> of{' '}
+            <span className='font-medium'>{totalPages || 1}</span>
+          </span>
+        </div>
+
         <button
           disabled={page * pageSize >= sortedApps.length}
           onClick={() => setPage(page + 1)}
-          className='px-4 py-2 bg-blue-500 text-white rounded-md disabled:opacity-50'
+          className='px-4 py-2 bg-blue-500 text-white rounded-md disabled:opacity-50 transition-colors hover:bg-blue-600'
         >
           Next
         </button>
