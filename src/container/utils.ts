@@ -6,7 +6,7 @@ interface Rule {
   value?: string | number | boolean
 }
 
-function generateIfCondition(rule: Rule, formData: Form): string {
+function generateIfCondition(rule: Rule, formData: { [key: string]: string }): string {
   if (!rule || !formData) {
     return ''
   }
@@ -43,7 +43,10 @@ function generateIfCondition(rule: Rule, formData: Form): string {
   }
 }
 
-function evaluateCondition(ifCondition: string, formData: Form): boolean {
+function evaluateCondition(
+  ifCondition: string,
+  formData: { [key: string]: string }
+): boolean {
   const parts = ifCondition.split(' ')
   const key = parts[0].replace("formData['", '').replace("']", '')
   const operator = parts[1]
