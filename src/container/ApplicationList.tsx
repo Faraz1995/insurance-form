@@ -2,6 +2,7 @@ import React, { useState, useEffect, ChangeEvent } from 'react'
 import axiosInstance from '../util/axiosInstance'
 import TextInput from '../components/TextInput'
 import SelectInput from '../components/SelectInput'
+import Loading from '../components/Loading'
 
 type Application = {
   id: string
@@ -75,11 +76,7 @@ const ApplicationList: React.FC = () => {
   }
 
   if (columns.length === 0) {
-    return (
-      <div className='flex justify-center items-center h-64'>
-        <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500'></div>
-      </div>
-    )
+    return <Loading />
   }
 
   const filteredApps =
