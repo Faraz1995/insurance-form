@@ -82,7 +82,7 @@ function evaluateCondition(
   }
 }
 
-const extractDynamicFields = (formData: Form[]): Field[] => {
+const extractDynamicFields = (formData: Form[]): SelectField[] => {
   const dynamicFields: SelectField[] = []
 
   // Function to recursively search through nested fields

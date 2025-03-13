@@ -103,7 +103,7 @@ const DynamicForm: React.FC = () => {
       .then((res) => {
         const arr = [res.data[0]]
         const dynamic = extractDynamicFields(arr)
-        setDynamicFields(dynamic as SelectField[])
+        setDynamicFields(dynamic)
         setFormStructure(arr)
       })
       .catch((err) => console.error('Error fetching form structure', err))
