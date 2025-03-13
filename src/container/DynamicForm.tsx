@@ -5,6 +5,7 @@ import TextInput from '../components/TextInput'
 import { evaluateCondition, extractDynamicFields, generateIfCondition } from './utils'
 import DateInput from '../components/DateInput'
 import RadioInput from '../components/RadioInput'
+import { toast } from 'react-toastify'
 
 interface FormData {
   [key: string]: string
@@ -95,6 +96,7 @@ const DynamicForm: React.FC = () => {
 
   const prevFormData = useRef(formData)
 
+  //fetch form structure
   useEffect(() => {
     axiosInstance({
       method: 'get',
@@ -109,7 +111,7 @@ const DynamicForm: React.FC = () => {
       .catch((err) => console.error('Error fetching form structure', err))
   }, [])
 
-  // Generic effect: For each dynamic field, check its dependency value in formData and fetch options if needed.
+  //check for change in dependency of options
   useEffect(() => {
     dynamicFields.forEach((field) => {
       if (field.dynamicOptions) {
@@ -117,7 +119,7 @@ const DynamicForm: React.FC = () => {
         const previousValue = prevFormData.current[dependencyKey]
         const currentValue = formData[dependencyKey]
         const dependencyValue = formData[dependencyKey]
-        // Only fetch if dependency has a value
+        // Only fetch if dependency has a value and changed
         if (previousValue !== currentValue && currentValue) {
           axiosInstance({
             method: field.dynamicOptions.method,
@@ -146,14 +148,12 @@ const DynamicForm: React.FC = () => {
       url: '/api/insurance/forms/submit',
       data: formData
     })
-      .then((response) => {
+      .then(() => {
         setFormData({})
-        console.log('Form submitted successfully', response.data)
+        toast.success('Form submitted successfully')
       })
-      .catch((err) => console.error('Error submitting form', err))
+      .catch(() => toast.error('Error in submitting form'))
   }
-
-  console.log(dynamicOptions)
 
   const generateOptions = (field: SelectField | RadioField) => {
     let options: { value: string; label: string }[] = [
@@ -162,15 +162,15 @@ const DynamicForm: React.FC = () => {
 
     if ('dynamicOptions' in field && field.dynamicOptions) {
       if (formData[field.dynamicOptions.dependsOn]) {
-        // Make request synchronously (not recommended in practice)
         try {
           const opts = dynamicOptions[field.id]
           const newOptions = convertOptionsToKeyValueFormat(opts)
 
           options = [{ value: '', label: 'Select an option' }, ...newOptions]
           return options
-        } catch (error) {
-          console.error('Error fetching dynamic options:', error)
+        } catch (err) {
+          console.log(err)
+          toast.error('Error in getting dynamic options')
         }
       }
     } else if (field?.options?.length) {
