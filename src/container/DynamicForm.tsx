@@ -6,6 +6,7 @@ import { evaluateCondition, extractDynamicFields, generateIfCondition } from './
 import DateInput from '../components/DateInput'
 import RadioInput from '../components/RadioInput'
 import { toast } from 'react-toastify'
+import Loading from '../components/Loading'
 
 interface FormData {
   [key: string]: string
@@ -85,14 +86,15 @@ function isGroup(item: RenderType): item is GroupField {
 }
 
 const convertOptionsToKeyValueFormat = (options: string[]) => {
-  return options.map((option) => ({ value: option, label: option }))
+  return options?.map((option) => ({ value: option, label: option })) || []
 }
 
 const DynamicForm: React.FC = () => {
-  const [formStructure, setFormStructure] = useState<Form[]>([])
+  const [formStructure, setFormStructure] = useState<Form[] | undefined>(undefined)
   const [formData, setFormData] = useState<FormData>({})
   const [dynamicFields, setDynamicFields] = useState<SelectField[]>([])
   const [dynamicOptions, setDynamicOptions] = useState<{ [key: string]: string[] }>({})
+  const [loading, setLoading] = useState<boolean>(false)
 
   const prevFormData = useRef(formData)
 
@@ -103,10 +105,9 @@ const DynamicForm: React.FC = () => {
       url: '/api/insurance/forms'
     })
       .then((res) => {
-        const arr = [res.data[0]]
-        const dynamic = extractDynamicFields(arr)
+        const dynamic = extractDynamicFields(res.data)
         setDynamicFields(dynamic)
-        setFormStructure(arr)
+        setFormStructure(res.data)
       })
       .catch((err) => console.error('Error fetching form structure', err))
   }, [])
@@ -142,7 +143,7 @@ const DynamicForm: React.FC = () => {
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-
+    setLoading(true)
     axiosInstance({
       method: 'post',
       url: '/api/insurance/forms/submit',
@@ -151,8 +152,12 @@ const DynamicForm: React.FC = () => {
       .then(() => {
         setFormData({})
         toast.success('Form submitted successfully')
+        setLoading(false)
       })
-      .catch(() => toast.error('Error in submitting form'))
+      .catch(() => {
+        setLoading(false)
+        toast.error('Error in submitting form')
+      })
   }
 
   const generateOptions = (field: SelectField | RadioField) => {
@@ -170,7 +175,6 @@ const DynamicForm: React.FC = () => {
           return options
         } catch (err) {
           console.log(err)
-          toast.error('Error in getting dynamic options')
         }
       }
     } else if (field?.options?.length) {
@@ -288,7 +292,7 @@ const DynamicForm: React.FC = () => {
       }
     }
   }
-  if (!formStructure) return <div>Loading form...</div>
+  if (!formStructure) return <Loading />
   return (
     <form
       onSubmit={handleSubmit}
@@ -300,8 +304,9 @@ const DynamicForm: React.FC = () => {
 
       <div className='flex justify-center'>
         <button
+          disabled={loading}
           type='submit'
-          className='px-6 py-2 bg-blue-500 text-white font-semibold rounded-md hover:bg-blue-600'
+          className='px-6 py-2 bg-blue-500 text-white font-semibold rounded-md disabled:bg-gray-300 hover:bg-blue-600'
         >
           Submit Application
         </button>
