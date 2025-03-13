@@ -87,7 +87,6 @@ const DynamicForm: React.FC = () => {
   const [formStructure, setFormStructure] = useState<Form[]>([])
   const [formData, setFormData] = useState<FormData>({})
 
-  // Fetch form structure from API when component mounts.
   useEffect(() => {
     axiosInstance({
       method: 'get',
@@ -118,10 +117,8 @@ const DynamicForm: React.FC = () => {
       })
       .catch((err) => console.error('Error submitting form', err))
   }
-  console.log(formData)
-  const generateOptions = (
-    field: SelectField | RadioField
-  ): { value: string; label: string }[] => {
+
+  const generateOptions = (field: SelectField | RadioField) => {
     let options: { value: string; label: string }[] = [
       { value: '', label: 'Select an option' }
     ]
@@ -163,10 +160,7 @@ const DynamicForm: React.FC = () => {
     return options
   }
 
-  // Recursive function to render fields (supports nested fields and conditional logic).
   const renderForm = (field: RenderType, index: number) => {
-    // Check conditional logic.
-
     if (isField(field) && field.visibility?.condition) {
       const ifCondition: string = generateIfCondition(field.visibility, formData)
       if (!evaluateCondition(ifCondition, formData)) {
@@ -282,16 +276,7 @@ const DynamicForm: React.FC = () => {
       {formStructure.map((field, index) => (
         <div key={field.formId}>{renderForm(field, index)}</div>
       ))}
-      {/* <TextInput
-        name='name'
-        label='Name'
-        placeholder='Enter your name'
-        id='name'
-        value={formData.name || ''}
-        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-          handleChange('name', e.target.value)
-        }
-      /> */}
+
       <div className='flex justify-center'>
         <button
           type='submit'
