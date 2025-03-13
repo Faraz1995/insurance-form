@@ -1,4 +1,4 @@
-import { Field, Form, GroupField } from '../types'
+import { Field, Form, GroupField, SelectField } from '../types'
 
 interface Rule {
   dependsOn: string
@@ -83,7 +83,7 @@ function evaluateCondition(
 }
 
 const extractDynamicFields = (formData: Form[]): Field[] => {
-  const dynamicFields: Field[] = []
+  const dynamicFields: SelectField[] = []
 
   // Function to recursively search through nested fields
   const processField = (field: Field | GroupField) => {
@@ -94,7 +94,7 @@ const extractDynamicFields = (formData: Form[]): Field[] => {
     }
     // If it's a field with dynamicOptions
     else if ('dynamicOptions' in field && field.dynamicOptions) {
-      dynamicFields.push(field as Field)
+      dynamicFields.push(field)
     }
   }
 

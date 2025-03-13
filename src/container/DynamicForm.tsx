@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react'
+import React, { useState, useEffect, ChangeEvent, FormEvent, useRef } from 'react'
 import axiosInstance from '../util/axiosInstance'
 import SelectInput from '../components/SelectInput'
 import TextInput from '../components/TextInput'
@@ -90,8 +90,11 @@ const convertOptionsToKeyValueFormat = (options: string[]) => {
 const DynamicForm: React.FC = () => {
   const [formStructure, setFormStructure] = useState<Form[]>([])
   const [formData, setFormData] = useState<FormData>({})
-  const [dynamicFields, setDynamicFields] = useState<Field[]>([])
-  const [dynamicOptions, setDynamicOptions] = useState({})
+  const [dynamicFields, setDynamicFields] = useState<SelectField[]>([])
+  const [dynamicOptions, setDynamicOptions] = useState<{ [key: string]: string[] }>({})
+
+  const prevFormData = useRef(formData)
+
   useEffect(() => {
     axiosInstance({
       method: 'get',
@@ -100,7 +103,7 @@ const DynamicForm: React.FC = () => {
       .then((res) => {
         const arr = [res.data[0]]
         const dynamic = extractDynamicFields(arr)
-        setDynamicFields(dynamic)
+        setDynamicFields(dynamic as SelectField[])
         setFormStructure(arr)
       })
       .catch((err) => console.error('Error fetching form structure', err))
@@ -111,11 +114,11 @@ const DynamicForm: React.FC = () => {
     dynamicFields.forEach((field) => {
       if (field.dynamicOptions) {
         const dependencyKey = field.dynamicOptions.dependsOn
+        const previousValue = prevFormData.current[dependencyKey]
+        const currentValue = formData[dependencyKey]
         const dependencyValue = formData[dependencyKey]
-        console.log('dyn******', dependencyValue)
-
         // Only fetch if dependency has a value
-        if (dependencyValue) {
+        if (previousValue !== currentValue && currentValue) {
           axiosInstance({
             method: field.dynamicOptions.method,
             url: `${field.dynamicOptions.endpoint}?${dependencyKey}=${dependencyValue}`
@@ -128,6 +131,7 @@ const DynamicForm: React.FC = () => {
         }
       }
     })
+    prevFormData.current = formData
   }, [formData, dynamicFields])
 
   const handleChange = (fieldName: string, value: string) => {
@@ -148,6 +152,8 @@ const DynamicForm: React.FC = () => {
       })
       .catch((err) => console.error('Error submitting form', err))
   }
+
+  console.log(dynamicOptions)
 
   const generateOptions = (field: SelectField | RadioField) => {
     let options: { value: string; label: string }[] = [
@@ -282,7 +288,6 @@ const DynamicForm: React.FC = () => {
       }
     }
   }
-  console.log(formData)
   if (!formStructure) return <div>Loading form...</div>
   return (
     <form
