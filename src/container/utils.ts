@@ -1,14 +1,12 @@
+import { Field, Form, GroupField } from '../types'
+
 interface Rule {
   dependsOn: string
   condition: string
   value?: string | number | boolean
 }
 
-interface FormData {
-  [key: string]: string // Allow any key and value type
-}
-
-function generateIfCondition(rule: Rule, formData: FormData): string {
+function generateIfCondition(rule: Rule, formData: Form): string {
   if (!rule || !formData) {
     return ''
   }
@@ -45,13 +43,13 @@ function generateIfCondition(rule: Rule, formData: FormData): string {
   }
 }
 
-function evaluateCondition(ifCondition: string, formData: FormData): boolean {
+function evaluateCondition(ifCondition: string, formData: Form): boolean {
   const parts = ifCondition.split(' ')
   const key = parts[0].replace("formData['", '').replace("']", '')
   const operator = parts[1]
   const value = parts[2].replace(/'/g, '') // Remove quotes
 
-  const formDataValue = formData[key]
+  const formDataValue = formData[key as keyof Form]
 
   switch (operator) {
     case '===':
@@ -67,9 +65,9 @@ function evaluateCondition(ifCondition: string, formData: FormData): boolean {
     case '<=':
       return +formDataValue <= +value
     case '&&':
-      return !!formDataValue && formDataValue.includes(value)
+      return !!formDataValue && formDataValue.includes(value as string & Field)
     case '&&!':
-      return !!formDataValue && !formDataValue.includes(value)
+      return !!formDataValue && !formDataValue.includes(value as string & Field)
     case '!==undefined':
     case '!==null':
       return formDataValue !== undefined && formDataValue !== null
@@ -81,4 +79,28 @@ function evaluateCondition(ifCondition: string, formData: FormData): boolean {
   }
 }
 
-export { generateIfCondition, evaluateCondition }
+const extractDynamicFields = (formData: Form[]): Field[] => {
+  const dynamicFields: Field[] = []
+
+  // Function to recursively search through nested fields
+  const processField = (field: Field | GroupField) => {
+    // If it's a group with nested fields
+    if (field.type === 'group' && 'fields' in field && field.fields) {
+      // Process all fields in the group
+      field.fields.forEach(processField)
+    }
+    // If it's a field with dynamicOptions
+    else if ('dynamicOptions' in field && field.dynamicOptions) {
+      dynamicFields.push(field as Field)
+    }
+  }
+
+  // Process all forms in the data
+  formData.forEach((form) => {
+    form.fields.forEach(processField)
+  })
+
+  return dynamicFields
+}
+
+export { generateIfCondition, evaluateCondition, extractDynamicFields }
