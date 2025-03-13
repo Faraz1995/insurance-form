@@ -2,7 +2,7 @@ import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react'
 import axiosInstance from '../util/axiosInstance'
 import SelectInput from '../components/SelectInput'
 import TextInput from '../components/TextInput'
-import { evaluateCondition, generateIfCondition } from './utils'
+import { evaluateCondition, extractDynamicFields, generateIfCondition } from './utils'
 import DateInput from '../components/DateInput'
 import RadioInput from '../components/RadioInput'
 
@@ -83,10 +83,15 @@ function isGroup(item: RenderType): item is GroupField {
   return 'type' in item && item.type === 'group'
 }
 
+const convertOptionsToKeyValueFormat = (options: string[]) => {
+  return options.map((option) => ({ value: option, label: option }))
+}
+
 const DynamicForm: React.FC = () => {
   const [formStructure, setFormStructure] = useState<Form[]>([])
   const [formData, setFormData] = useState<FormData>({})
-
+  const [dynamicFields, setDynamicFields] = useState<Field[]>([])
+  const [dynamicOptions, setDynamicOptions] = useState({})
   useEffect(() => {
     axiosInstance({
       method: 'get',
@@ -94,10 +99,36 @@ const DynamicForm: React.FC = () => {
     })
       .then((res) => {
         const arr = [res.data[0]]
+        const dynamic = extractDynamicFields(arr)
+        setDynamicFields(dynamic)
         setFormStructure(arr)
       })
       .catch((err) => console.error('Error fetching form structure', err))
   }, [])
+
+  // Generic effect: For each dynamic field, check its dependency value in formData and fetch options if needed.
+  useEffect(() => {
+    dynamicFields.forEach((field) => {
+      if (field.dynamicOptions) {
+        const dependencyKey = field.dynamicOptions.dependsOn
+        const dependencyValue = formData[dependencyKey]
+        console.log('dyn******', dependencyValue)
+
+        // Only fetch if dependency has a value
+        if (dependencyValue) {
+          axiosInstance({
+            method: field.dynamicOptions.method,
+            url: `${field.dynamicOptions.endpoint}?${dependencyKey}=${dependencyValue}`
+          }).then((res) => {
+            setDynamicOptions((prev) => ({
+              ...prev,
+              [field.id]: res.data.states
+            }))
+          })
+        }
+      }
+    })
+  }, [formData, dynamicFields])
 
   const handleChange = (fieldName: string, value: string) => {
     setFormData((prev) => ({ ...prev, [fieldName]: value }))
@@ -127,32 +158,17 @@ const DynamicForm: React.FC = () => {
       if (formData[field.dynamicOptions.dependsOn]) {
         // Make request synchronously (not recommended in practice)
         try {
-          const xhr = new XMLHttpRequest()
-          const endpoint =
-            'https://assignment.devotel.io' +
-            field.dynamicOptions.endpoint +
-            '?country=' +
-            formData[field.dynamicOptions.dependsOn]
-          xhr.open(field.dynamicOptions.method, endpoint, false)
-          xhr.send()
+          const opts = dynamicOptions[field.id]
+          const newOptions = convertOptionsToKeyValueFormat(opts)
 
-          if (xhr.status === 200) {
-            const responseData = JSON.parse(xhr.responseText)
-            const dynamicOptions = responseData.states.map((item: string) => ({
-              value: item,
-              label: item
-            }))
-            options = [{ value: '', label: 'Select an option' }, ...dynamicOptions]
-          }
+          options = [{ value: '', label: 'Select an option' }, ...newOptions]
+          return options
         } catch (error) {
           console.error('Error fetching dynamic options:', error)
         }
       }
     } else if (field?.options?.length) {
-      const newOptions = field.options.map((option) => ({
-        value: option,
-        label: option
-      }))
+      const newOptions = convertOptionsToKeyValueFormat(field.options)
 
       options = [{ value: '', label: 'Select an option' }, ...newOptions]
     }
@@ -266,7 +282,7 @@ const DynamicForm: React.FC = () => {
       }
     }
   }
-
+  console.log(formData)
   if (!formStructure) return <div>Loading form...</div>
   return (
     <form
