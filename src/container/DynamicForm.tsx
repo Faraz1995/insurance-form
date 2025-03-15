@@ -197,8 +197,13 @@ const DynamicForm: React.FC = () => {
     //render title
     if (!isField(field) && field.title) {
       return (
-        <div key={field.formId} className='mb-4 p-4 border border-gray-300 rounded-md'>
-          <h3 className='font-semibold text-lg mb-2'>{field.title}</h3>
+        <div
+          key={field.formId}
+          className='mb-4 p-4 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800'
+        >
+          <h3 className='font-semibold text-lg mb-2 text-gray-800 dark:text-gray-200'>
+            {field.title}
+          </h3>
           {field.fields &&
             field.fields.map((subField: Field) => renderForm(subField, index))}
         </div>
@@ -211,9 +216,11 @@ const DynamicForm: React.FC = () => {
         <div
           className={`p-4 ${
             field.fields.length !== index && 'border-b'
-          } border-gray-300 `}
+          } border-gray-300 dark:border-gray-700`}
         >
-          <h3 className='font-semibold text-lg mb-2'>{field.label}</h3>
+          <h3 className='font-semibold text-lg mb-2 text-gray-800 dark:text-gray-200'>
+            {field.label}
+          </h3>
           {field.fields.map((subField) => renderForm(subField, index))}
         </div>
       )
@@ -296,7 +303,7 @@ const DynamicForm: React.FC = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className='max-w-2xl mx-auto p-6 bg-white rounded-md shadow-md'
+      className='max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-md shadow-md dark:shadow-gray-900'
     >
       {formStructure.map((field, index) => (
         <div key={field.formId}>{renderForm(field, index)}</div>
@@ -306,7 +313,7 @@ const DynamicForm: React.FC = () => {
         <button
           disabled={loading}
           type='submit'
-          className='px-6 py-2 bg-blue-500 text-white font-semibold rounded-md disabled:bg-gray-300 hover:bg-blue-600'
+          className='px-6 py-2 bg-blue-500 text-white font-semibold rounded-md disabled:bg-gray-300 dark:disabled:bg-gray-600 hover:bg-blue-600 dark:hover:bg-blue-700'
         >
           Submit Application
         </button>
